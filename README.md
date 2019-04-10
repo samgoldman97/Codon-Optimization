@@ -22,7 +22,7 @@ Spring 2019 CS287 Final Project. We take a neural based approach to the task of 
 
 [Shen, Tianxiao, et al. "Style transfer from non-parallel text by cross-alignment." Advances in neural information processing systems. 2017.](https://papers.nips.cc/paper/7259-style-transfer-from-non-parallel-text-by-cross-alignment.pdf)
 
-[Prabhumoye, Shrimai, et al. "Style transfer through back-translation." arXiv preprint arXiv:1804.09000 (2018).] (https://arxiv.org/abs/1804.09000)
+[Prabhumoye, Shrimai, et al. "Style transfer through back-translation." arXiv preprint arXiv:1804.09000 (2018).](https://arxiv.org/abs/1804.09000)
 
 ## TODO
 
@@ -33,5 +33,7 @@ Spring 2019 CS287 Final Project. We take a neural based approach to the task of 
 [Orthologous genes](http://www.pathogenomics.sfu.ca/ortholugedb)
 
 [Ensembl download cDNA genomes](https://bacteria.ensembl.org/info/website/ftp/index.html)
+
 [Ensembl genome download ftp link for e.coli](ftp://ftp.ensemblgenomes.org/pub/release-43/bacteria//fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655/cdna/)
+
 [NCBI E.coli search](https://www.ncbi.nlm.nih.gov/search/all/?term=escherichia%20coli)
