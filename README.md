@@ -8,7 +8,7 @@ Spring 2019 CS287 Final Project. We take a neural based approach to the task of 
 
 [Tian, Jian, et al. "Presyncodon, a Web Server for Gene Design with the Evolutionary Information of the Expression Hosts." International journal of molecular sciences 19.12 (2018): 3872.](https://www.mdpi.com/1422-0067/19/12/3872/htm)
 
-[Goodman, Daniel B., George M. Church, and Sriram Kosuri. "Causes and effects of N-terminal codon bias in bacterial genes." Science 342.6157 (2013): 475-479.](https://s3.amazonaws.com/academia.edu.documents/36578217/2013_Goodman_Causes_and_Effects_of_N-Terminal_Codon_Bias_in_Bacterial_Genes.pdf?AWSAccessKeyId=AKIAIWOWYYGZ2Y53UL3A&Expires=1554931398&Signature=4w3aEQE1XF%2BfcUKDmBrntemeNdM%3D&response-content-disposition=inline%3B%20filename%3DCauses_and_Effects_of_N-Terminal_Codon_B.pdf)
+[Goodman, Daniel B., George M. Church, and Sriram Kosuri. "Causes and effects of N-terminal codon bias in bacterial genes." Science 342.6157 (2013): 475-479.](https://science-sciencemag-org.ezp-prod1.hul.harvard.edu/content/sci/342/6157/475.full.pdf) (requires HarvardKey login)
 
 ### Possible benchmark tasks
 
@@ -18,11 +18,17 @@ Spring 2019 CS287 Final Project. We take a neural based approach to the task of 
 
 [Mueller, Jonas, David Gifford, and Tommi Jaakkola. "Sequence to better sequence: continuous revision of combinatorial structures." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.](http://proceedings.mlr.press/v70/mueller17a/mueller17a.pdf)
 
+#### Style Transfer  
 [Zhao, Yanpeng, et al. "Language Style Transfer from Non-Parallel Text with Arbitrary Styles." (2018).](https://openreview.net/pdf?id=B1NKuC6SG)
 
 [Shen, Tianxiao, et al. "Style transfer from non-parallel text by cross-alignment." Advances in neural information processing systems. 2017.](https://papers.nips.cc/paper/7259-style-transfer-from-non-parallel-text-by-cross-alignment.pdf)
 
 [Prabhumoye, Shrimai, et al. "Style transfer through back-translation." arXiv preprint arXiv:1804.09000 (2018).](https://arxiv.org/abs/1804.09000)
+
+[Zhao, Yanpeng et al. "Language Style Transfer from Sentences with Arbitrary Unknown Styles." arXiv preprint arXiv:1808.04071v1 (2018).](https://arxiv.org/pdf/1808.04071.pdf)
+
+[Fu, Zhenxin et al. "Style Transfer in Text: Exploration and Evaluation." arXiv preprint arXiv:1711.06861v2 (2017).](https://arxiv.org/abs/1711.06861)
+
 
 ## TODO
 
