@@ -27,7 +27,20 @@ Spring 2019 CS287 Final Project. We take a neural based approach to the task of 
 
 [Zhao, Yanpeng et al. "Language Style Transfer from Sentences with Arbitrary Unknown Styles." arXiv preprint arXiv:1808.04071v1 (2018).](https://arxiv.org/pdf/1808.04071.pdf)
 
-[Fu, Zhenxin et al. "Style Transfer in Text: Exploration and Evaluation." arXiv preprint arXiv:1711.06861v2 (2017).](https://arxiv.org/abs/1711.06861)
+[Fu, Zhenxin et al. "Style Transfer in Text: Exploration and Evaluation." arXiv preprint arXiv:1711.06861v2 (2017).](https://arxiv.org/abs/1711.06861) 
+
+### Other ideas  
+
+#### Meta-learning  
+Meta-learning by optimization has been hot lately with the development of methods based on gradient descent. Of primary note is Chelsea Finn et al.'s Model-Agnostic Meta-Learning (MAML), which aims to train models to do well for a variety of tasks. 
+
+To look at our goal under a MAML framework, we could imagine coming up with an optimal codon for each host organism to be a task, and we want to be learn how to generalize across a whole set of organisms. This makes language modeling slightly more interesting.   
+* [Blog Post 1](https://bair.berkeley.edu/blog/2017/07/18/learning-to-learn/)  
+* [Blog Post 2](https://towardsdatascience.com/model-agnostic-meta-learning-maml-8a245d9bc4ac)  
+* [Finn et al. "Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks." ICML 2017.](https://arxiv.org/pdf/1703.03400.pdf)  
+
+Towards NLP in particular:    
+* [Gu, Jiatao et al. "Meta-Learning for Low-Resource Neural Machine Translation." EMNLP 2018.](https://arxiv.org/pdf/1808.08437.pdf)
 
 
 ## TODO
