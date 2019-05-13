@@ -7,6 +7,10 @@
 from helpers import *
 import os
 import sys
+from Bio.Seq import Seq
+from Bio import SeqIO
+from Bio.SeqUtils import CodonUsage
+
 sys.path.append("../sequences/")
 
 if __name__=="__main__":
