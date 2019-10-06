@@ -2,7 +2,7 @@
 
 A deep learning based approach to the task of genetic codon optimization.
 
-This work was completed as a continuation of a final project completed for Harvard's Spring 2019 CS287 Final Project. We use the namedtensor wrapper of pytorch as devleoped in this class. 
+This work was completed as a continuation of a final project completed for Harvard's Spring 2019 CS287 Final Project. We use the namedtensor wrapper of pytorch as developed in this class. 
 
 We achieve modest improvements over frequency baselines in both e coli highly expressed genes and human highly expressed transcripts. 
 
