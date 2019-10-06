@@ -8,7 +8,6 @@ We achieve modest improvements over frequency baselines in both e coli highly ex
 
 ## Data Sources
 
-NCBI Nucleotide is where most of these should be coming from
 
 [Human HEG](https://www.tau.ac.il/~elieis/HKG/)
  
