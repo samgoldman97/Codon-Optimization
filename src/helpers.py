@@ -26,7 +26,7 @@ import re
 
 ##### Data functions ######
 
-def download_human_transcripts(list_file, email_address, outfile="human_HE.fastsa"): 
+def download_human_transcripts(list_file, email_address, outfile="human_HE.fasta"): 
 	'''Download human transcripts'''
 
 	Entrez.email = email_address 
@@ -36,15 +36,33 @@ def download_human_transcripts(list_file, email_address, outfile="human_HE.fasts
 	handle = Entrez.efetch(db="nucleotide", 
 							 id=ids,
 							 retmode ="xml", 
-							 rettype="fasta", 
+							 # rettype="fasta", 
 							 strand=1)
+
+
 
 	output = Entrez.parse(handle)
 	seqs = []
-	for entry in output: 
-		seqs.append(SeqRecord(Seq(entry["TSeq_sequence"]), 
-								id=entry['TSeq_accver'],
-								description=entry["TSeq_defline"]
+	for entry in output:
+		feat_tbl = entry["GBSeq_feature-table"]
+		num_cds = 0 
+		for j in feat_tbl: 
+			if j['GBFeature_key'] == "CDS": 
+				num_cds += 1
+				cds = j["GBFeature_location"]
+
+				# print(cds)
+				cds_loc = j['GBFeature_intervals']
+				# print("Num of features: ", len(cds_loc))
+				start = int(cds_loc[0]['GBInterval_from'])
+				end = int(cds_loc[0]['GBInterval_to'])
+				# print(start, end)
+				seq = entry["GBSeq_sequence"][start - 1 : end]
+		if num_cds != 1: 
+			print("Error: Too many CDS found", num_cds)
+		seqs.append(SeqRecord(Seq(seq), 
+								id=entry['GBSeq_locus'],
+								description=entry["GBSeq_definition"]
 								)
 					)
 	handle.close()
@@ -102,6 +120,9 @@ def build_helper_tables(TEXT, device):
 
 def get_first_orf(seq):
 	'''  Helper function to truncate sequence to first ATG window and end at last multiple of 3
+
+	NOTE: This is since deprecated because we handle this in preprocessing using non-naive annotations 
+
 	Args: 
 		seq: string to reformat
 	Return: 
@@ -125,9 +146,7 @@ def convert_fasta_to_csv(file_name, out_file = "cds.csv", random_state = 1, prin
 		None
 	'''
 
-	sequences = [j for j in [get_first_orf(str(rec.seq)) for rec in SeqIO.parse(file_name, "fasta")] 
-					if j is not None]
-	df = pd.DataFrame(sequences, columns=["sequence"])
+	sequences = [str(rec.seq) for rec in SeqIO.parse(file_name, "fasta")]
 	df = df.sample(frac=1, random_state=random_state)
 	# df = df[:500]
 	df.to_csv(out_file, index=False, header=False)
