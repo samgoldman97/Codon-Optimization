@@ -39,8 +39,6 @@ def download_human_transcripts(list_file, email_address, outfile="human_HE.fasta
 							 # rettype="fasta", 
 							 strand=1)
 
-
-
 	output = Entrez.parse(handle)
 	seqs = []
 	for entry in output:
@@ -118,22 +116,22 @@ def build_helper_tables(TEXT, device):
 
 	return (AA_LABEL, index_table, codon_to_aa, codon_to_aa_index, mask_tbl)
 
-def get_first_orf(seq):
-	'''  Helper function to truncate sequence to first ATG window and end at last multiple of 3
+# def get_first_orf(seq):
+# 	'''  Helper function to truncate sequence to first ATG window and end at last multiple of 3
 
-	NOTE: This is since deprecated because we handle this in preprocessing using non-naive annotations 
+# 	NOTE: This is since deprecated because we handle this in preprocessing using non-naive annotations 
 
-	Args: 
-		seq: string to reformat
-	Return: 
-		A string beginning from ATG (else None) if "ATG" appears in seq and divisible by 3
+# 	Args: 
+# 		seq: string to reformat
+# 	Return: 
+# 		A string beginning from ATG (else None) if "ATG" appears in seq and divisible by 3
 	
-	''' 
-	for position, i in enumerate(seq[:-2]):
-		if seq[position: position + 3] == "ATG":
-			end_position = ((len(seq) - position) // 3) * 3
-			return seq[position:end_position + position]
-	return None
+# 	''' 
+# 	for position, i in enumerate(seq[:-2]):
+# 		if seq[position: position + 3] == "ATG":
+# 			end_position = ((len(seq) - position) // 3) * 3
+# 			return seq[position:end_position + position]
+# 	return None
 
 def convert_fasta_to_csv(file_name, out_file = "cds.csv", random_state = 1, print_stats = True):
 	''' Convert input fasta file to csv file 
@@ -147,6 +145,7 @@ def convert_fasta_to_csv(file_name, out_file = "cds.csv", random_state = 1, prin
 	'''
 
 	sequences = [str(rec.seq) for rec in SeqIO.parse(file_name, "fasta")]
+	df = pd.DataFrame(sequences, columns=["sequence"])
 	df = df.sample(frac=1, random_state=random_state)
 	# df = df[:500]
 	df.to_csv(out_file, index=False, header=False)
@@ -272,7 +271,6 @@ def get_prediction(batch, model, aa_compress, mask_tbl, device):
 		predictions = predictions.argmax("vocablen")
 	return predictions
 
-
 def get_prediction_iter(iterator, model, aa_compress, mask_tbl, device): 
 	''' Predict outputs from sequence'''
 
@@ -321,7 +319,6 @@ def output_list_of_res(res, TEXT, outfile = "test.txt"):
 				new_seq = translate_to_seq(batch[{"batch": index}], TEXT)
 				fp.write(new_seq + "\n")
 
-
 ##### Model train and eval ##### 
 
 def train_model(train_iter, model, aa_compress, TEXT, device, train_params, 
@@ -346,8 +343,6 @@ def train_model(train_iter, model, aa_compress, TEXT, device, train_params,
 
 		return: model  
 	'''
-
-
 	
 	model.train()
 	if "TEACHER_FORCE" in train_params:
@@ -488,8 +483,6 @@ def joint_ppl_acc(data_iter, model, device, aa_compress, TEXT, mask_tbl, teacher
 
 			loss = loss_function(predictions, stacked_target)
 			ppl += loss.sum().item()
-
-
 
 			# For quick results, toggle this
 			# if i == 20: 
