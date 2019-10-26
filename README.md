@@ -1,17 +1,8 @@
 # Codon-Optimization
 
-A deep learning based approach to the task of genetic codon optimization.
+A deep learning based approach to the task of genetic codon prediction and optimization. We proposee an LSTM-Transducer model for this task, gaining modest improvements in accuracy and perplexity in predicting codon choice over frequency-based methods. 
 
-This work was completed as a continuation of a final project completed for Harvard's Spring 2019 CS287 Final Project. We use the namedtensor wrapper of pytorch as developed in this class. 
+The models were tested on highly expressed genes of [E. coli MG1655](http://genomes.urv.cat/HEG-DB/) and [Humans hg19](https://www.tau.ac.il/~elieis/HKG/) and implemented with PyTorch wrapper, namedtensor. 
 
-We achieve modest improvements over frequency baselines in both e coli highly expressed genes and human highly expressed transcripts. 
+Example of how to train our model on this data is shown in src/main.py
 
-## Data Sources
-
-
-[Human HEG](https://www.tau.ac.il/~elieis/HKG/)
- 
-[Ensembl download cDNA genomes](https://bacteria.ensembl.org/info/website/ftp/index.html)
-
-
-[NCBI E.coli search](https://www.ncbi.nlm.nih.gov/search/all/?term=escherichia%20coli)
