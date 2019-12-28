@@ -10,6 +10,7 @@ Helper python functions
 from Bio import Entrez, SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from Bio.Alphabet import IUPAC
 import torch
 import torchtext
 from torchtext.data import Iterator, BucketIterator
@@ -26,6 +27,25 @@ import re
 
 ##### Data functions ######
 
+def set_difference(fasta1, fasta2, outfile):
+    '''Find all sequences in fasta1 not in fasta2 and save them into outfile'''
+    sequences1 = set(str(rec.seq) for rec in SeqIO.parse(fasta1, "fasta"))
+    sequences2 = set(str(rec.seq) for rec in SeqIO.parse(fasta2, "fasta"))
+    f1_only = sequences1.difference(sequences2)
+    f2_only = sequences2.difference(sequences1)
+    intersection = sequences1.intersection(sequences2)
+    print("Len f1: ", len(sequences1))
+    print("Len f2: ", len(sequences2))
+    print("Len f1 only: ", len(f1_only))
+    print("Len f2 only: ", len(f2_only))
+    print("F1 - F1 only: ", len(sequences1) - len(f1_only))
+    print("Len intersection", len(intersection))
+
+    records = [SeqRecord(Seq(seq, IUPAC.protein)) for seq in f1_only]
+    SeqIO.write(records, outfile, "fasta")
+    
+
+    
 def download_human_transcripts(list_file, email_address, outfile="human_HE.fasta"): 
 	'''Download human transcripts'''
 
