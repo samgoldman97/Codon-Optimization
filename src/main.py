@@ -9,9 +9,11 @@ device = torch.device("cpu") #torch.device('cuda:0' if torch.cuda.is_available()
 if __name__=="__main__": 
 	fasta_in_file = "../data/ecoli.heg.fasta"
 	csv_out_file = "../data/ecoli.heg.csv"
-	convert_fasta_to_csv(file_name = fasta_in_file, out_file=csv_out_file)
+	start_codons = convert_fasta_to_csv(file_name = fasta_in_file, out_file=csv_out_file)
 	train, test, TEXT = load_csv_data(csv_out_file, device=device)
-	AA_LABEL, index_table, codon_to_aa, codon_to_aa_index, mask_tbl = build_helper_tables(TEXT, device=device)
+	(AA_LABEL, index_table, codon_to_aa, 
+			codon_to_aa_index, mask_tbl) = build_helper_tables(TEXT, 
+											start_codons, device=device)
 
 	###### FREQUENCY MODEL #######
 	# Unigram model 
@@ -51,6 +53,7 @@ if __name__=="__main__":
 		"NUM_LAYERS" : 1, 
 		"LSTM_DROPOUT" : 0.1,
 		"BIDIRECTIONAL" : True, 
+    	"START_INDEX" : TEXT.vocab.stoi["atg"], 
 		"DEVICE" : device
 	}
 
@@ -97,7 +100,7 @@ if __name__=="__main__":
 		print("Train: ", train_ac)
 		print("Test: ", test_ac)
 
-	res = get_prediction_iter(test, model, aa_compress, mask_tbl, device)
+	res = get_prediction_iter(test, model, TEXT, aa_compress, mask_tbl, device)
 	output_list_of_res(res, TEXT, outfile="../outputs/predictions/temp.txt")
 
 
