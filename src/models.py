@@ -106,6 +106,7 @@ class AA_COMPRESS(ntorch.nn.Module):
 	def __init__(self, params): 
 		super(AA_COMPRESS, self).__init__()
 		self.codon_to_aa = params["CODON_TO_AA"]
+    	self.start_index = params["START_INDEX"]
 		self.aa_embed = (ntorch.nn.Embedding.from_pretrained(self.codon_to_aa)
 						 .spec("seqlen", "hiddenlen"))
 
@@ -113,6 +114,11 @@ class AA_COMPRESS(ntorch.nn.Module):
 		self.aa_embed.weight.requires_grad_(False)  
 
 	def forward(self, seq): 
+		# replace first position with Methionine!
+		seq_copy = seq.clone()
+		seq_copy[{"seqlen" : 0}] = self.start_index
+		seq = seq_copy
+
 		return self.aa_embed(seq)
 
 
@@ -142,6 +148,7 @@ class AA_BILSTM(ntorch.nn.Module):
 		self.lstm_dropout = params["LSTM_DROPOUT"]
 		self.bidirectional = params["BIDIRECTIONAL"]
 		self.device = params["DEVICE"]
+		self.start_index = params["START_INDEX"]
 
 		self.num_directions = 1
 		if self.bidirectional:
@@ -165,6 +172,11 @@ class AA_BILSTM(ntorch.nn.Module):
 		'''
 		Forward pass
 		''' 
+		# Replace start codon...
+		seq_copy = seq.clone()
+		seq_copy[{"seqlen" : 0}] = self.start_index
+		seq = seq_copy
+
 		aa_rep = self.aa_embed(seq)    
 		h_0 = ntorch.zeros(self.num_layers * self.num_directions, aa_rep.shape["batch"], self.hiddenlen, 
 							names=("layers", "batch", "hiddenlen")).to(self.device)
@@ -271,8 +283,15 @@ class NNLM(ntorch.nn.Module):
 				if random.random() < self.teacher_force_prob: 
 					model_input = text[{"seqlen" : slice(position, position+1)}]
 				else: 
-					# TODO: Should we be masking this output?
-					model_input = output.argmax("vocablen")
+					# Masking output... 
+					mask_targets = text[{"seqlen" : slice(position, position+1)}].clone()
+					if position == 0: 
+						mask_targets[{"seqlen" : 0}] = TEXT.vocab.stoi["<start>"]
+					mask_bad_codons = ntorch.tensor(mask_tbl[mask_targets.values], 
+						names=("seqlen", "batch", "vocablen")).float()
+
+					model_input = (output + mask_bad_codons).argmax("vocablen")
+					# model_input = (output).argmax("vocablen")
 			  
 			output = ntorch.cat(outputs, dim="seqlen")
 		return output

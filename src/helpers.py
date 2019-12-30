@@ -87,10 +87,11 @@ def download_human_transcripts(list_file, email_address, outfile="human_HE.fasta
 	with open(outfile, "w") as output_handle:
 		SeqIO.write(seqs, output_handle, "fasta")
 
-def build_helper_tables(TEXT, device): 
+def build_helper_tables(TEXT, start_codons, device): 
 	'''  Load CSV file of nucleotide sequences
 	Args: 
 		TEXT: torchtext field for the vocab of nucleotides
+		start_codons: List of start codons
 		device : torch device
 
 	Returns: 
@@ -106,8 +107,10 @@ def build_helper_tables(TEXT, device):
 	bases = "tcag"
 	codons = [a + b + c for a in bases for b in bases for c in bases]
 	aa = [str(Seq(j).translate()) for j in codons]
+
 	# Mapping of codons to amino acids
 	codon_to_aa = dict(zip(codons, aa))
+	aa.append("<START>")
 	# One hot encoding of all possible amino acids
 	AA_LABEL.build_vocab(aa)
 
@@ -133,6 +136,14 @@ def build_helper_tables(TEXT, device):
 
 	# For ease, make sure padding gets predicted as padding...
 	mask_tbl[1,1] = 0
+
+	# TREAT START CODON
+	codon_start_index = TEXT.vocab.stoi['<start>']
+	start_codon_indices = [TEXT.vocab.stoi[start_codon.lower()] 
+	                       for start_codon in start_codons]
+	for j in start_codon_indices: 
+	  mask_tbl[codon_start_index, j] = 0
+
 
 	return (AA_LABEL, index_table, codon_to_aa, codon_to_aa_index, mask_tbl)
 
@@ -161,7 +172,7 @@ def convert_fasta_to_csv(file_name, out_file = "cds.csv", random_state = 1, prin
 		random_state: Seed to use to shuffle the sequences
 		print_stats: Print number of bases and codons after processing 
 	Returns: 
-		None
+		start_codons: list of start codons
 	'''
 
 	sequences = [str(rec.seq) for rec in SeqIO.parse(file_name, "fasta")]
@@ -175,6 +186,8 @@ def convert_fasta_to_csv(file_name, out_file = "cds.csv", random_state = 1, prin
 		for i,j in df.iterrows():
 			num_bases += len(j.sequence)
 		print("Bases, codons:" , num_bases, num_bases / 3)
+	start_codons = set([j[0:3] for j in sequences])
+	return start_codons
 
 def load_csv_data(csv_file, device, random_state = 1, train_split = 0.8, batch_size = 10 ): 
 	'''  Load CSV file of nucleotide sequences
@@ -275,7 +288,7 @@ def make_n_gram_dict(train_iter, n, amino_acid_conversion, TEXT, AA_LABEL):
 
 ##### Output model values to file #####
 
-def get_prediction(batch, model, aa_compress, mask_tbl, device): 
+def get_prediction(batch, model, TEXT, aa_compress, mask_tbl, device): 
 	''' Predict outputs from sequence'''
 	model.to(device)
 	model.eval()
@@ -285,13 +298,20 @@ def get_prediction(batch, model, aa_compress, mask_tbl, device):
 		target = batch.sequence.narrow("seqlen", 1, seq_len - 1)
 		# Forward
 		predictions = model(text, aa_compress(target)) 
-		mask_bad_codons = ntorch.tensor(mask_tbl[target.values], 
-							 names=("seqlen", "batch", "vocablen")).float()
+		# Mask all outputs that don't work
+		# Note: first, we clone the targets and then we switch the first target
+		#   codon into the start codon to ensure that we allow for all possible
+		#   start codons to be predicted!
+		mask_targets = target.clone()
+		mask_targets[{"seqlen" : 0}] = TEXT.vocab.stoi["<start>"]
+		mask_bad_codons = ntorch.tensor(mask_tbl[mask_targets.values], 
+			names=("seqlen", "batch", "vocablen")).float()
+
 		predictions = (mask_bad_codons + predictions.float())
 		predictions = predictions.argmax("vocablen")
 	return predictions
 
-def get_prediction_iter(iterator, model, aa_compress, mask_tbl, device): 
+def get_prediction_iter(iterator, model, TEXT, aa_compress, mask_tbl, device): 
 	''' Predict outputs from sequence'''
 
 	model.to(device)
@@ -304,8 +324,14 @@ def get_prediction_iter(iterator, model, aa_compress, mask_tbl, device):
 			target = batch.sequence.narrow("seqlen", 1, seq_len - 1)
 			# Forward
 			predictions = model(text, aa_compress(target)) 
-			mask_bad_codons = ntorch.tensor(mask_tbl[target.values], 
-							 names=("seqlen", "batch", "vocablen")).float()
+			# Mask all outputs that don't work
+			# Note: first, we clone the targets and then we switch the first target
+			#   codon into the start codon to ensure that we allow for all possible
+			#   start codons to be predicted!
+			mask_targets = target.clone()
+			mask_targets[{"seqlen" : 0}] = TEXT.vocab.stoi["<start>"]
+			mask_bad_codons = ntorch.tensor(mask_tbl[mask_targets.values], 
+			names=("seqlen", "batch", "vocablen")).float()
 			predictions = (mask_bad_codons + predictions.float())
 			predictions = predictions.argmax("vocablen")
 			output.append(predictions)
@@ -480,8 +506,11 @@ def joint_ppl_acc(data_iter, model, device, aa_compress, TEXT, mask_tbl, teacher
 
 
 			# Mask all outputs that don't work
-			mask_bad_codons = ntorch.tensor(mask_tbl[target.values], 
-							 names=("seqlen", "batch", "vocablen")).float()
+			#   start codons to be predicted!
+			mask_targets = target.clone()
+			mask_targets[{"seqlen" : 0}] = TEXT.vocab.stoi["<start>"]
+			mask_bad_codons = ntorch.tensor(mask_tbl[mask_targets.values], 
+				names=("seqlen", "batch", "vocablen")).float()
 			predictions = (mask_bad_codons.double() + predictions.double())
 
 
