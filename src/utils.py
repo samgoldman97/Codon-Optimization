@@ -5,6 +5,7 @@ from typing import Tuple
 import itertools 
 import numpy as np
 from Bio.Seq import Seq
+from collections import defaultdict
 
 def generate_codon_tbl(): 
     """ Generate a codon table """
@@ -30,10 +31,38 @@ def generate_codon_tbl():
     # Map codon number to AA numbers
     CODON_TO_AA_NUMS = {CODON_NUMS[k] : AA_NUMS[v] for k,v in codon_to_aa.items()}
 
-
     return AA_NUMS, CODON_NUMS, CODON_TO_AA_NUMS
 
+def reverse_codon_to_aa(codon_to_aa_nums): 
+    """ Reverse this mapping """
+    aa_to_codons = defaultdict(lambda : [])
+    for c, a in codon_to_aa_nums.items():
+        aa_to_codons[a].append(c)
+    return aa_to_codons
+
+# CONSTANTS 
 AA_NUMS, CODON_NUMS, CODON_TO_AA_NUMS  = generate_codon_tbl()
+AA_TO_CODON_NUMS = reverse_codon_to_aa(CODON_TO_AA_NUMS)
+
+
+# CONSTANTS 
+AA_NUMS, CODON_NUMS, CODON_TO_AA_NUMS  = generate_codon_tbl()
+
+# Names for dict
+AA_SEQ = "aa_seq" 
+CODON_SEQ = "codon_seq" 
+SEQLEN= "seqlen" 
+
+# Alphabet constants 
+START_CODON = max(list(CODON_NUMS.values())) + 1
+START_AA = max(list(AA_NUMS.values())) + 1
+
+# Vocab Max
+CODON_VOCAB_MAX = START_CODON
+AA_VOCAB_MAX = START_AA
+
+# Constants
+PADDING = 0 
 
 # Get test train splits
 def get_train_val_test(obj : np.array, train_frac  : float, val_frac : float,
@@ -68,10 +97,6 @@ def get_train_val_test(obj : np.array, train_frac  : float, val_frac : float,
 
     train, val, test = obj[train_indices], obj[val_indices], obj[test_indices]
     return (train,val,test)
-
-
-
-
 
 # Fasta helpers
 
