@@ -1,11 +1,6 @@
 """ 
 Use case: python src/main.py  --data-file data/ecoli.heg.fasta
 
-TODO: 
-- Export env
-- add readme and setup.py command
-- add gpu
-- add data download
 
 Future goals: 
 - Shear sequences into 100 tokens or partition them for more batching

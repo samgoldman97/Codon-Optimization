@@ -1,44 +1,13 @@
 name: codon-opt
 channels:
   - pytorch
+  - anaconda
   - defaults
 dependencies:
-  - blas=1.0=mkl
-  - ca-certificates=2020.6.24=0
-  - certifi=2020.6.20=py36_0
-  - freetype=2.10.2=ha233b18_0
-  - intel-openmp=2019.4=233
-  - jpeg=9b=he5867d9_2
-  - lcms2=2.11=h92f6f08_0
-  - libcxx=10.0.0=1
-  - libedit=3.1.20191231=h1de35cc_1
-  - libffi=3.3=hb1e8313_2
-  - libpng=1.6.37=ha441bb4_0
-  - libtiff=4.1.0=hcb84e12_1
-  - lz4-c=1.9.2=hb1e8313_1
-  - mkl=2019.4=233
-  - mkl-service=2.3.0=py36hfbe908c_0
-  - mkl_fft=1.1.0=py36hc64f4ea_0
-  - mkl_random=1.1.1=py36h959d312_0
-  - ncurses=6.2=h0a44026_1
-  - ninja=1.10.0=py36h879752b_0
-  - numpy=1.19.1=py36h3b9f5b6_0
-  - numpy-base=1.19.1=py36hcfb5961_0
-  - olefile=0.46=py36_0
-  - openssl=1.1.1g=h1de35cc_0
-  - pillow=7.2.0=py36ha54b6ba_0
-  - pip=20.2.1=py36_0
+  - biopython=1.77=py36haf1e3a3_0
   - python=3.6.10=hf48f09d_2
   - pytorch=1.6.0=py3.6_0
-  - readline=8.0=h1de35cc_0
-  - setuptools=49.2.0=py36_0
-  - six=1.15.0=py_0
-  - sqlite=3.32.3=hffcf06c_0
-  - tk=8.6.10=hb0a8c7a_0
+  - torchtext=0.7.0=py36
   - torchvision=0.7.0=py36_cpu
-  - wheel=0.34.2=py36_0
-  - xz=5.2.5=h1de35cc_0
-  - zlib=1.2.11=h1de35cc_3
-  - zstd=1.4.5=h41d2c2f_0
-prefix: /Users/samgoldman/anaconda3/envs/codon-opt
-
+  - tqdm=4.48.2=py_0
+  - urllib3=1.25.10=py_0
