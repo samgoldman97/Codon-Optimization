@@ -1,9 +1,0 @@
-torch
-torchtext
-git+https://github.com/harvardnlp/namedtensor
-Bio
-matplotlib
-seaborn
-pandas
-numpy
-collections

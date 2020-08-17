@@ -94,13 +94,91 @@ class CodonModel(torch.nn.Module):
         # mask
         # Select right mask for each aa
         # Only mask for the 2nd onward amino acid; skip <START> and M 
-        mask = self.mask_logits[aa_sequences[:, 2:]]
+        mask = self.mask_logits[aa_sequences[:, 1:]]
 
-        # Mask everything BUT the start token
-        res[:, 1:, :] += mask
+        # Mask everything BUT the preds for M token, which can be anythign
+        res[:, 1:, :] += mask[:, 1:, :]
 
         # Return LOGITS
         return res
+
+    def generate_codon_seqs(self, batch, teacher_force=False): 
+        """ Generate codon sequences for the batch 
+        TODO (refactoring) : 
+        - Abstract the parts of this loop that mirror forward into that 
+        Return: 
+            List of lists of sequences
+        """
+
+        aa_sequences = batch[utils.AA_SEQ]
+        codon_sequences = batch[utils.CODON_SEQ]
+        seqlens = batch[utils.SEQLEN]
+
+        with torch.no_grad(): 
+            # Keep AA context constant
+            aa_context = self.aa_model(aa_sequences)
+
+            # mask; this shouldn't chagne as we output codons
+            # Select right mask for each aa
+            # Only mask for the 2nd onward amino acid; skip <START> and M 
+            # Here, skip the <START> token
+            mask = self.mask_logits[aa_sequences[:, 1:]]
+
+            # Assume codon sequences have start token to start
+            codon_sub_sequence = codon_sequences[:, [0]]
+            generated_seqs = [codon_sub_sequence]
+
+            # LSTM State holder
+            prev_state = None
+
+            # Now generate each position sequentially
+            # Generate a codon at every position but last
+            for codon_position in range(codon_sequences.shape[1] - 1):
+
+                # Concat all generated
+                codon_sub_sequence = generated_seqs[-1]
+
+                # Avoid running whole LSTM up to this point
+                if isinstance(self.codon_model, LSTMCodon): 
+                    codon_context, prev_state = self.codon_model(codon_sub_sequence, return_full=True,
+                                                                 state=prev_state,)
+                else:
+                    codon_context = self.codon_model(codon_sub_sequence)
+
+                # Get only up to the current codon position 
+                # Add 1 for the off by 1 shift of codon and add 1 for list
+                # indexing
+                aa_context_slice = aa_context[:, codon_position  + 1 :codon_position + 2 , :]
+                # Only the last codon output  
+                codon_context_slice = codon_context[:, -1:, :]
+
+                # Stagger them so they're OFF BY 1
+                # Copy slice code from earlier
+                concated = torch.cat([aa_context_slice, codon_context_slice], dim=2)
+
+                # Activate
+                concated = torch.nn.functional.relu(concated)
+
+                # Dropout
+                concated = self.dropout(concated)
+
+                # Apply output layer
+                res = self.lin_transform_mlp(concated)
+
+                # Don't mask the first round bc this is methionine generation
+                if codon_position > 0: 
+                    # Res should be zero because it's only 1 dimension we're
+                    # interested in 
+                    res[:, 0, :] += mask[: , codon_position, :]
+
+                # TODO: Include sampling here, not just argmax
+                new_inputs = res.argmax(2)
+                generated_seqs.append(new_inputs)
+
+        # Catenate everything BUT the start token
+        gen_seqs = torch.cat(generated_seqs[1:], 1).cpu().numpy()
+        out_seqs = [gen_seq[:seqlen] for gen_seq,seqlen in zip(gen_seqs, seqlens)]
+        return out_seqs
 
 ###### Codon models #####
 
@@ -141,14 +219,18 @@ class LSTMCodon(CodonEncoder):
                                   bidirectional=False, 
                                   dropout=args.codon_dropout, 
                                   batch_first=True)
-    def forward(self,x): 
+
+    def forward(self,x, state=None, return_full = False): 
         """ Forward pass"""
         # Embed x 
         x = self.one_hot_embed(x)
         # Now run through lstm
-        output, (hn, cn) = self.lstm(x)
+        output, (hn, cn) = self.lstm(x, state)
         # Get output
-        return output
+        if not return_full: 
+            return output
+        else: 
+            return output, (hn, cn)
 
     def get_out_dim(self): 
         """ Return the output dimension for each position """
@@ -250,63 +332,3 @@ class AAOneHotEncoder(AAEncoder):
 
     def get_out_dim(self): 
         return self.out_size
-
-#	def set_teacher_force(self, new_prob):
-#		self.teacher_force_prob = new_prob
-#		
-#	def forward(self, text, aa_info):
-#		''' 
-#		  Pass in context for the next amino acid
-#		'''
-#		
-#		# Reset for each new batch...
-#		h_0 = ntorch.zeros(text.shape["batch"], self.num_layers, self.hiddenlen, 
-#							names=("batch", "layers", "hiddenlen")).to(self.device)
-#		c_0 = ntorch.zeros(text.shape["batch"], self.num_layers, self.hiddenlen, 
-#							names=("batch", "layers", "hiddenlen")).to(self.device)
-#	 
-#		# If we should use all the sequence as input
-#		if self.teacher_force_prob == 1: 
-#		  text_embedding = self.embedding(text)
-#		  hidden_states, (h_n, c_n) = self.LSTM(text_embedding, (h_0, c_0))
-#		  output = self.linear_dropout(hidden_states)
-#		  output = ntorch.cat([output, aa_info], dim="hiddenlen")
-#		  output = self.linear(output)
-#		
-#		# If we should use some combination of teacher forcing
-#		else: 
-#			# Use for teacher forcing...
-#			outputs = []
-#			model_input = text[{"seqlen" : slice(0, 1)}]
-#			h_n, c_n = h_0, c_0
-#			for position in range(text.shape["seqlen"]): 
-#				text_embedding = self.embedding(model_input)
-#				hidden_states, (h_n, c_n) = self.LSTM(text_embedding, (h_n, c_n))
-#
-#				output = self.linear_dropout(hidden_states)
-#				aa_info_subset = aa_info[{"seqlen" : slice(position, position+1)}]
-#				output = ntorch.cat([output, aa_info_subset], dim="hiddenlen")
-#				output = self.linear(output)
-#				outputs.append(output)
-#
-#				# Define next input... 
-#				if random.random() < self.teacher_force_prob: 
-#					model_input = text[{"seqlen" : slice(position, position+1)}]
-#				else: 
-#					# Masking output... 
-#					mask_targets = text[{"seqlen" : slice(position, position+1)}].clone()
-#					if position == 0: 
-#						mask_targets[{"seqlen" : 0}] = TEXT.vocab.stoi["<start>"]
-#					mask_bad_codons = ntorch.tensor(mask_tbl[mask_targets.values], 
-#						names=("seqlen", "batch", "vocablen")).float()
-#
-#					model_input = (output + mask_bad_codons).argmax("vocablen")
-#					# model_input = (output).argmax("vocablen")
-#			  
-#			output = ntorch.cat(outputs, dim="seqlen")
-#		return output
-#  
-#
-#
-#
-#

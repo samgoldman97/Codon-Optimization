@@ -38,8 +38,17 @@ class DNADataset(torch.utils.data.Dataset):
         """ Return the array that holds all the sequences tokenized to codons"""
         return self.codon_seqs
 
+    def export_codon_seq(self, file_): 
+        """ Export codon seq lists to a file """ 
+        with open(file_, "w") as fp: 
+            fp.write("\n".join(self.seqlist))
+
     def __getitem__(self, idx : int): 
-        """ Get Tuple[codon numpy seq, aa numpy seq, seqlen] """
+        """ Get Tuple[codon numpy seq, aa numpy seq, seqlen] 
+
+        Seqlen does NOT include start token
+
+        """
         return (self.codon_seqs[idx], self.aa_seqs[idx], len(self.aa_seqs[idx]))
 
     def __len__(self): 

@@ -2,11 +2,10 @@
 Use case: python src/main.py  --data-file data/ecoli.heg.fasta
 
 TODO: 
-- Add predictions
-- teacher forcing for model
 - Export env
 - add readme and setup.py command
 - add gpu
+- add data download
 
 Future goals: 
 - Shear sequences into 100 tokens or partition them for more batching
@@ -157,6 +156,7 @@ def ngram_metrics(args, dataset, n_gram_dict_list, n_list, weights_list):
             # Hold weighted sum of ngram dict predictions
             prob_outputs = defaultdict(lambda : 0 )
             true_aa = aa_seq[index]
+            unif = 1 / len(utils.AA_TO_CODON_NUMS[true_aa])
             for n_gram_dict, n, weight in zip(n_gram_dict_list, 
                                               n_list,
                                               weights_list): 
@@ -168,13 +168,21 @@ def ngram_metrics(args, dataset, n_gram_dict_list, n_list, weights_list):
                 aa_context = aa_seq[context_start:context_end] 
                 aa_context_str = str(list(aa_context))
 
+                unobserved = False
+                # Add_weight is unif!
+                if sum(list(n_gram_dict[aa_context_str])) == 0: 
+                    unobserved=True
+
                 for k,v in n_gram_dict[aa_context_str].items(): 
-                    prob_outputs[k] += (v * weight)
+                    # If we havenn't seen this context in this dict, add unif 
+                    if unobserved: 
+                        prob_outputs[k] += (unif * weight)
+                    else: 
+                        prob_outputs[k] += (v * weight)
 
             # Random choice on codon if unobserved context
             if sum(list(prob_outputs.values())) == 0.0:
                 predicted_codon = random.choice(utils.AA_TO_CODON_NUMS[true_aa])
-                unif = 1 / len(utils.AA_TO_CODON_NUMS[true_aa])
                 # Probability of the outcome
                 p_outcome = unif
             else:
@@ -194,6 +202,85 @@ def ngram_metrics(args, dataset, n_gram_dict_list, n_list, weights_list):
     acc = total_correct / total_predictions 
     res = {"acc": acc, "ppl" : ppl}
     return res
+
+def ngram_output(args, dataset, n_gram_dict_list, n_list, 
+                 weights_list, sample=True, export_file=None): 
+    """ Generate output sequences for a dictionary of ngrams.
+
+    Optionally save to file
+
+    Args: 
+        args: Namespace args
+        dataset: DNADataset 
+        n_gram_dict_list: List of ngram dictionaries generated that correspond
+            to n_list and should be weighted
+        n_list: Corresponding context size (e.g. unigram n=1, trigrams n=3)
+        weights_list: fraction of weighting
+        sample (bool) : If true sample, else take argmax
+        export_file (str) : Export file string
+
+    Returns:
+        AA sequence for output
+    """
+
+    weights_list = [i / sum(weights_list) for i in weights_list]
+    codon_out_list = []
+    for codon_seq, aa_seq, seqlen in dataset: 
+        codon_out =  []
+        for index, true_codon in enumerate(codon_seq): 
+            # Hold weighted sum of ngram dict predictions
+            prob_outputs = defaultdict(lambda : 0 )
+            true_aa = aa_seq[index]
+            unif = 1 / len(utils.AA_TO_CODON_NUMS[true_aa])
+            for n_gram_dict, n, weight in zip(n_gram_dict_list, 
+                                              n_list,
+                                              weights_list): 
+                # How far to look back 
+                half_n = n // 2 
+                context_start = max(0, index - half_n)
+                # Add 1 because of python zero indexing 
+                context_end = min(seqlen, index + half_n + 1)
+                aa_context = aa_seq[context_start:context_end] 
+                aa_context_str = str(list(aa_context))
+
+                unobserved = False
+                # Add_weight is unif!
+                if sum(list(n_gram_dict[aa_context_str])) == 0: 
+                    unobserved=True
+
+                for k,v in n_gram_dict[aa_context_str].items(): 
+                    # If we havenn't seen this context in this dict, add unif 
+                    if unobserved: 
+                        prob_outputs[k] += (unif * weight)
+                    else: 
+                        prob_outputs[k] += (v * weight)
+
+            codon_probs = np.zeros(utils.CODON_VOCAB_MAX)
+            for k,v  in prob_outputs.items(): 
+                codon_probs[k] = v 
+
+            # If we have zero in this, then set it to unif
+            if np.sum(codon_probs) == 0.0: 
+                for k in utils.AA_TO_CODON_NUMS[true_aa]: 
+                    codon_probs[k] = unif
+
+            # Sample or take a hard argmax
+            if sample: 
+                out_codon = np.random.choice(np.arange(utils.CODON_VOCAB_MAX),p = codon_probs)
+            else: 
+                out_codon =  np.argmax(codon_probs)
+
+
+            # Convert this to a
+            codon_out.append(out_codon)
+        # Convert to string
+        new_seq = "".join([utils.NUM_TO_CODON[s] for s in codon_out])
+        codon_out_list.append(new_seq)
+
+    if export_file is not None: 
+        with open(export_file, "w") as fp: 
+            fp.write("\n".join(codon_out_list))
+    return codon_out_list
 
 def baseline_model(args : argparse.Namespace): 
     """ Run ngram frequency based models"""
@@ -219,7 +306,6 @@ def baseline_model(args : argparse.Namespace):
                                   [train_metrics, val_metrics, test_metrics]): 
             logging.info(f"{n}-gram on dataset {names} results:{json.dumps(metrics, indent=2)}")
     
-
     # Run joint weighting of these
     joint_dicts = [unigram_dict, trigram_dict, fivegram_dict]
     n_list = [1,3,5]
@@ -233,10 +319,24 @@ def baseline_model(args : argparse.Namespace):
     test_metrics= ngram_metrics(args, test_dataset, 
                                 n_gram_dict_list=joint_dicts, n_list=n_list,
                                 weights_list=weight_list)
+
+    # Export to file
+    train_out = ngram_output(args, train_dataset,
+                             n_gram_dict_list=[ngram_dict], n_list=n_list,
+                             weights_list=weight_list, 
+                             export_file=f"{args.out_prefix}_train_ngram.txt")
+    val_out = ngram_output(args, val_dataset,
+                           n_gram_dict_list=[ngram_dict], n_list=n_list,
+                           weights_list=weight_list, 
+                           export_file=f"{args.out_prefix}_val_ngram.txt")
+    test_out= ngram_output(args, test_dataset,
+                           n_gram_dict_list=[ngram_dict], n_list=n_list,
+                           weights_list=weight_list, 
+                           export_file=f"{args.out_prefix}_test_ngram.txt")
+
     for names, metrics in zip(["train", "val", "test"], 
                               [train_metrics, val_metrics, test_metrics]): 
         logging.info(f"1-3-5-gram on dataset {names} results:{json.dumps(metrics, indent=2)}")
-
 
 def get_train_val_test(args): 
     """ Get train, val, test dna datasets """
@@ -245,6 +345,7 @@ def get_train_val_test(args):
 
     # Make into test, val, train??
     train,val,test = utils.get_train_val_test(sequences, 0.8,0.1,0.1)
+
 
     # Log num data
     logging.info(f"Num sequences in train: {len(train)}")
@@ -255,7 +356,14 @@ def get_train_val_test(args):
     train_dataset = data.DNADataset(train)
     val_dataset = data.DNADataset(val)
     test_dataset = data.DNADataset(test)
+
+    # Write true seqs to file
+    train_dataset.export_codon_seq(f"{args.out_prefix}_true_train_seqs.txt")
+    val_dataset.export_codon_seq(f"{args.out_prefix}_true_val_seqs.txt")
+    test_dataset.export_codon_seq(f"{args.out_prefix}_true_test_seqs.txt")
+
     return train_dataset, val_dataset, test_dataset
+
 
 def neural_model(args: argparse.Namespace): 
     """ Main method"""
@@ -275,6 +383,10 @@ def neural_model(args: argparse.Namespace):
     train_losses, val_losses = [], []
     best_loss = get_test_loss(model, args, val_dataset)
     best_model = copy.deepcopy(model)
+
+    generate_out_seqs(model, args, train_dataset, 
+                      save_file = f"{args.out_prefix}_train_gen.txt")
+
     for epoch in range(args.epochs): 
         epoch_losses = []
         model = model.train()
@@ -339,6 +451,16 @@ def neural_model(args: argparse.Namespace):
                               [train_metrics, val_metrics, test_metrics]): 
         logging.info(f"Dataset {names} results:{json.dumps(metrics, indent=2)}")
 
+    logging.info(f"Generating generated results:") 
+
+    # Generate output sequences
+    generate_out_seqs(model, args, train_dataset, 
+                      save_file = f"{args.out_prefix}_train_gen.txt")
+    generate_out_seqs(model, args, val_dataset, 
+                      save_file = f"{args.out_prefix}_val_gen.txt")
+    generate_out_seqs(model, args, test_dataset, 
+                      save_file = f"{args.out_prefix}_test_gen.txt")
+
 def compute_metrics(model, args, dataset): 
     """ Compute ppl accuracy using the model given """
     losses = []
@@ -382,6 +504,39 @@ def compute_metrics(model, args, dataset):
     res = {"ppl" : ppl, 
            "acc" : total_acc}
     return res
+
+def generate_out_seqs(model, args, dataset, 
+                      save_file = None): 
+    """ Generate output sequences for a deep model """  
+
+    loader = DataLoader(dataset, batch_size=args.batch_size, 
+                        shuffle=False, collate_fn=data.dna_collate)
+    total_seqs = []
+    model = model.eval()
+    if args.gpu: 
+        model = model.cuda()
+    with torch.no_grad(): 
+        for batch in loader: 
+            # Convert batch to gpu 
+            if args.gpu: 
+                batch[utils.CODON_SEQ] = batch[utils.CODON_SEQ].cuda()
+                batch[utils.AA_SEQ] = batch[utils.AA_SEQ].cuda()
+
+            # Model
+            new_seqs = model.generate_codon_seqs(batch) 
+            total_seqs.extend(new_seqs)
+
+            if args.debug:
+                # Break after 1
+                break
+
+    # Convert to string / codons
+    new_seqs = ["".join([utils.NUM_TO_CODON[s] for s in seq])  
+                for seq in total_seqs]
+
+    if save_file is not None: 
+        with open(save_file, "w") as fp: 
+            fp.write("\n".join(new_seqs))
 
 def get_test_loss(model, args, dataset): 
     """ Compute test loss for the model on a new dataset """
@@ -434,110 +589,8 @@ if __name__=="__main__":
                         )
     logging.info(f"Args: {args}")
 
-    # Run baselines
+    # Run baselines or neural model 
     if args.run_baselines: 
         baseline_model(args)
     else: 
         neural_model(args)
-
-
-    # TODO: Export predictions
-
-
-    model = NNLM(model_params)
-    aa_compress = AA_BILSTM(aa_compress_params)
-    model.to(device), aa_compress.to(device)
-
-
-    train, test, TEXT = load_csv_data(csv_out_file, device=device)
-    (AA_LABEL, index_table, codon_to_aa, 
-     codon_to_aa_index, mask_tbl) = build_helper_tables(TEXT, 
-                                                        start_codons, device=device)
-
-    ###### FREQUENCY MODEL #######
-    # Unigram model 
-    # zero_dict = make_n_gram_dict(train, 0, codon_to_aa_index, TEXT, AA_LABEL)
-
-    # aa_params = {
-    # 	"CODON_TO_AA" : codon_to_aa_index,
-    # 	"N_GRAM_DICTS" : [zero_dict],
-    # 	"N_LIST" : [0],
-    # 	"WEIGHT_LIST" : [1],
-    # 	"OUT_VOCAB" : len(TEXT.vocab.stoi),
-    # 	"DEVICE" : device, 
-    # 	"TEXT" : TEXT
-    # }
-
-    # model = FreqModel()
-    # aa_compress = AA_NGRAM(aa_params)
-    # model.to(device), aa_compress.to(device)
-
-    # test_ac, train_ac = (joint_ppl_acc(test, model, device, aa_compress, TEXT, mask_tbl), 
-    # 						joint_ppl_acc(train, model, device, aa_compress, TEXT, mask_tbl))
-    # print("Train: ", train_ac)
-    # print("Test: ", test_ac)
-
-    # output_iterator_to_file(test, TEXT, outfile="temp.txt")
-
-    # res = get_prediction_iter(test, model, aa_compress, mask_tbl, device)
-    # output_list_of_res(res, TEXT, outfile="../outputs/predictions/temp.txt")
-
-    ##### LSTM + BiLSTM AA ##### 
-
-
-    aa_compress_params = {
-        "CODON_TO_AA" : index_table,
-        "EMBED_DIM" : index_table.shape[1],
-        "HIDDEN_LEN" : 50, 
-        "NUM_LAYERS" : 1, 
-        "LSTM_DROPOUT" : 0.1,
-        "BIDIRECTIONAL" : True, 
-        "START_INDEX" : TEXT.vocab.stoi["atg"], 
-        "DEVICE" : device
-    }
-
-    model_params = {
-        "VOCAB_SIZE" : len(TEXT.vocab),
-        "EMBED_DIM" : 50,# None,
-        "OUT_VOCAB": len(TEXT.vocab),
-        "HIDDEN_LEN" : 50,
-        "NUM_LAYERS" : 2,
-        "LINEAR_DROPOUT" : 0.1,
-        "LSTM_DROPOUT" : 0.1,    
-        "AA_COMPRESS_SIZE" : (aa_compress_params["HIDDEN_LEN"] * 
-                              (2 if aa_compress_params["BIDIRECTIONAL"] else 1)),
-        "TEACHER_FORCE" : 1, 
-        "DEVICE": device
-    }
-
-    model = NNLM(model_params)
-    aa_compress = AA_BILSTM(aa_compress_params)
-    model.to(device), aa_compress.to(device)
-
-
-    train_params = {
-        "num_epochs":1, 
-        "lr":1e-3,  
-        "weight_decay":0,
-        "device":device, 
-        "grad_clip": 100, 
-        "plot_loss" : True,
-        "TEACHER_FORCE" : 1
-    }
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=train_params["lr"],
-                                 weight_decay=train_params["weight_decay"])
-    optimizer_aa = torch.optim.Adam(aa_compress.parameters(), 
-                                    lr=train_params["lr"], 
-                                    weight_decay=train_params["weight_decay"])
-    # Number of training rounds
-    for i in range(5): 
-        train_model(train, model, aa_compress, TEXT, device, train_params,
-                    optimizer, optimizer_aa)
-        test_ac, train_ac = (joint_ppl_acc(test, model, device, aa_compress, TEXT, mask_tbl), 
-                             joint_ppl_acc(train, model, device, aa_compress, TEXT, mask_tbl))
-        print("Train: ", train_ac)
-        print("Test: ", test_ac)
-
-    res = get_prediction_iter(test, model, TEXT, aa_compress, mask_tbl, device)
-    output_list_of_res(res, TEXT, outfile="../outputs/predictions/temp.txt")

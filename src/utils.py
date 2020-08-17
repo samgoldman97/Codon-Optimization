@@ -44,9 +44,10 @@ def reverse_codon_to_aa(codon_to_aa_nums):
 AA_NUMS, CODON_NUMS, CODON_TO_AA_NUMS  = generate_codon_tbl()
 AA_TO_CODON_NUMS = reverse_codon_to_aa(CODON_TO_AA_NUMS)
 
-
 # CONSTANTS 
 AA_NUMS, CODON_NUMS, CODON_TO_AA_NUMS  = generate_codon_tbl()
+
+NUM_TO_CODON = {v :k for k,v in CODON_NUMS.items()}
 
 # Names for dict
 AA_SEQ = "aa_seq" 
@@ -125,6 +126,7 @@ def get_full_fasta(file_ : str):
     return ret
 
 if __name__=="__main__": 
-    generate_codon_tbl()
+    #generate_codon_tbl()
+    pass
 
 
