@@ -2,7 +2,7 @@
 
 A deep learning based approach to the task of genetic codon prediction and optimization. We propose an LSTM-Transducer model for this task, gaining modest improvements in accuracy and perplexity in predicting codon choice over frequency-based methods. 
 
-This was originally implemented as an undergraduate project in Google Colab using a PyTorch wrapper, namedtensor for Harvard's CS287r Machine Learning for Natural Language Processing Course. After this work was presented as a [poster at MLCB 2019](https://mlcb.github.io/mlcb2019_proceedings/papers/paper_29.pdf), I've revised some of the code for readability and reproducibility with better coding practices after a year of grad school\*. Lastly, no model generated sequences have been experimentaly tested for expression in the lab against frequency baselines.
+This was originally implemented as an undergraduate project in Google Colab using a PyTorch wrapper, namedtensor for Harvard's CS287r Machine Learning for Natural Language Processing Course. After this work was presented as a [poster at MLCB 2019](https://mlcb.github.io/mlcb2019_proceedings/papers/paper_29.pdf), the code was revised with better coding practices for readability and reproducibility \*. Lastly, no model generated sequences have been experimentaly tested for expression in the lab against frequency baselines.
 
 ## Data 
 
