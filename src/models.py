@@ -2,7 +2,8 @@
 
 import torch
 import logging
-from src import utils
+
+import utils
 
 def get_codon_model(codon_model_name, args): 
     """ Build codon model"""

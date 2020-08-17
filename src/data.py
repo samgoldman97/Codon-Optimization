@@ -3,14 +3,16 @@ import numpy as np
 import torch
 import re
 
-from src import utils
+# From this package
+import utils
 
 class DNADataset(torch.utils.data.Dataset): 
     """ Transcript sequence """ 
     def __init__(self, seqlist: List[str]): 
         """ Init """
         super(DNADataset, self).__init__()
-        self.seqlist = seqlist
+
+        self.seqlist = [j.upper() for j in seqlist]
 
         # Convert seq list into array of numpy items
         self.tokenize = lambda x : re.findall('.{%d}' % 3, x)

@@ -31,7 +31,8 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
-from src import utils, data, models
+# Import from this module
+import utils, data, models
 
 def get_args(): 
     """ Get arguments """
